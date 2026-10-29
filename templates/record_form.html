@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <h2>{{ 'Edit record' if r else 'নতুন কাজ / ঘটনার রেকর্ড' }}</h2>
+    <form method="post">
+        <input type="hidden" name="csrf" value="{{ csrf() }}">
+        {% if r %}
+        <input type="hidden" name="version" value="{{ r.Version }}">
+        <p><strong>সংশ্লিষ্ট কর্মী:</strong> {% for subject in selected %}{{ subject.EmployeeCode }} · {{ subject.EmployeeName }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+        <p class="muted">রেকর্ড তৈরির পরে সংশ্লিষ্ট কর্মী ও টিম পরিবর্তন করা যাবে না।</p>
+        {% else %}
+        <label for="employee-search">কর্মী খুঁজুন · Employee ID / নাম / টিম</label>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input id="employee-search" type="search" placeholder="যেমন: AAL05132 / Chaytanna / HR" autocomplete="off" style="flex:1;min-width:180px">
+            <button id="employee-search-clear" class="secondary" type="button" style="margin:0">Clear search</button>
+        </div>
+        <p class="muted">একই টিমের এক বা একাধিক কর্মী নির্বাচন করুন। অন্য নাম সার্চ করলেও আগে নির্বাচিত কর্মী নির্বাচিত থাকবে।</p>
+        <p id="employee-search-count" class="muted" role="status" aria-live="polite">কর্মী: {{ employees|length }}</p>
+        <div id="employee-list" style="max-height:300px;overflow:auto;border:1px solid #dce5ed;border-radius:8px;padding:8px 14px">
+            {% for employee in employees %}
+            <div class="check employee-option" data-employee-search="{{ employee.Code }} {{ employee.Name }} {{ employee.TeamName }}">
+                <label for="employee-{{ employee.Id }}">
+                    <input id="employee-{{ employee.Id }}" type="checkbox" name="employee_ids" value="{{ employee.Id }}">
+                    {{ employee.Code }} · {{ employee.Name }} · {{ employee.TeamName }}
+                </label>
+            </div>
+            {% else %}<p class="muted">কোনো সক্রিয় কর্মী পাওয়া যায়নি। Admin থেকে আগে কর্মী যোগ করুন।</p>{% endfor %}
+            <p id="employee-search-empty" class="muted" hidden>এই ID / নাম / টিমের সঙ্গে কোনো মিল নেই।</p>
+        </div>
+        {% endif %}
+        <div class="grid">
+            <div>
+                <label for="occurred-at">ঘটনার তারিখ ও সময় · Bangladesh</label>
+                {% if r %}{% set event_time = r.OccurredAt|string|replace(' ', 'T') %}{% else %}{% set event_time = '' %}{% endif %}
+                <input id="occurred-at" type="datetime-local" name="occurred_at" value="{{ event_time[:16] }}" required>
+            </div>
+            <div><label for="record-kind">কাজের ধরন</label><select id="record-kind" name="kind" required>{% for kind in ['Good','Mistake','Improvement'] %}<option value="{{ kind }}" {% if r and r.Kind==kind %}selected{% endif %}>{{ kind }}</option>{% endfor %}</select></div>
+            <div><label for="record-impact">Financial impact</label><select id="record-impact" name="impact" required>{% for impact in ['None','Gain','Loss'] %}<option value="{{ impact }}" {% if r and r.Impact==impact %}selected{% endif %}>{{ impact }}</option>{% endfor %}</select></div>
+            <div><label for="estimated-amount">আনুমানিক টাকা · BDT</label><input id="estimated-amount" name="estimated" type="number" min="0" max="99999999999.99" step="0.01" value="{% if r %}{{ '%.2f'|format(r.EstimatedCents/100) }}{% else %}0{% endif %}" required></div>
+        </div>
+        <label for="record-title">শিরোনাম</label><input id="record-title" name="title" type="text" maxlength="200" value="{{ r.Title if r else '' }}" required>
+        <label for="record-description">কী হয়েছে, কারণ এবং ফলাফল</label><textarea id="record-description" name="description" maxlength="4000" required>{{ r.Description if r else '' }}</textarea>
+        <p class="muted">Financial impact None হলে টাকা 0 দিন। একাধিক কর্মী হলে টাকা সমানভাবে ভাগ হবে। Save করার পরে বিস্তারিত পেজ থেকে ছবি/ডকুমেন্ট আপলোড করে Submit করুন।</p>
+        <button type="submit">Save draft</button><a class="button secondary" href="{{ url_for('home') }}">Cancel</a>
+    </form>
+</div>
+{% if not r %}<script src="{{ url_for('static', filename='employee-search.js', v='3') }}" defer></script>{% endif %}
+{% endblock %}

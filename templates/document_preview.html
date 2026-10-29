@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{{ filename }}</title>
+
+    <style>
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            padding: 18px;
+            color: #172a3a;
+            background: white;
+        }
+
+        h2 {
+            font-size: 18px;
+            overflow-wrap: anywhere;
+        }
+
+        p {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .note {
+            color: #617382;
+            font-size: 13px;
+        }
+
+        .scroll {
+            overflow: auto;
+            margin-bottom: 24px;
+        }
+
+        table {
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        td {
+            border: 1px solid #dce5ed;
+            padding: 8px;
+            min-width: 90px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>{{ filename }}</h2>
+
+    <p class="note">
+        Content preview. Original formatting, embedded images,
+        charts and Excel date formats may not be displayed.
+        Excel formulas are not recalculated.
+        Maximum 5 sheets, 200 rows and 50 columns per sheet.
+    </p>
+
+    {% for paragraph in paragraphs %}
+    <p>{{ paragraph }}</p>
+    {% endfor %}
+
+    {% for sheet in sheets %}
+    <h3>{{ sheet.name }}</h3>
+
+    <div class="scroll">
+        <table>
+            {% for row in sheet.rows %}
+            <tr>
+                {% for cell in row %}
+                <td>{{ cell }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endfor %}
+
+    {% if not paragraphs and not sheets %}
+    <p>No previewable content found. Download the original file.</p>
+    {% endif %}
+</body>
+</html>

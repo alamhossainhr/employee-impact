@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% block content %}<h2>Admin settings</h2><div class="grid"><div class="card"><h3>Add department</h3><form method="post"><input type="hidden" name="csrf" value="{{csrf()}}"><input type="hidden" name="action" value="department"><label>Name</label><input name="name" maxlength="120" required><button>Save department</button></form></div><div class="card"><h3>Add team</h3><form method="post"><input type="hidden" name="csrf" value="{{csrf()}}"><input type="hidden" name="action" value="team"><label>Department</label><select name="department">{% for d in departments %}<option value="{{d.Id}}">{{d.Name}}</option>{% endfor %}</select><label>Team name</label><input name="name" maxlength="120" required><button>Save team</button></form></div><div class="card"><h3>Add employee</h3><form method="post"><input type="hidden" name="csrf" value="{{csrf()}}"><input type="hidden" name="action" value="employee"><label>Employee code</label><input name="code" maxlength="40" required><label>Name</label><input name="name" maxlength="160" required><label>Designation</label><input name="designation" maxlength="120" required><label>Team</label><select name="team">{% for t in teams %}<option value="{{t.Id}}">{{t.DepartmentName}} / {{t.Name}}</option>{% endfor %}</select><button>Save employee</button></form></div><div class="card"><h3>Create user account</h3><form method="post"><input type="hidden" name="csrf" value="{{csrf()}}"><input type="hidden" name="action" value="user"><label>Username</label><input name="username" minlength="6" maxlength="80" pattern="(?=.*[A-Za-z])(?=.*[0-9])\S{6,80}" title="Letter and number; minimum 6 characters; no spaces" required><label>Password · 6+ characters; letter and number</label><input name="password" pattern="(?=.*[A-Za-z])(?=.*[0-9])\S{6,256}" title="Letter and number; minimum 6 characters; no spaces" type="password" minlength="6" maxlength="256" autocomplete="new-password" required><label>Role</label><select name="role"><option>Employee</option><option>HR</option><option>Admin</option></select><label>Employee · required for Employee role</label><select name="employee"><option value="">No linked employee</option>{% for e in employees %}<option value="{{e.Id}}">{{e.Code}} · {{e.Name}} · {{e.TeamName}}</option>{% endfor %}</select><button>Create account</button></form></div></div><div class="card">
+    <h3>কর্মী ও ব্যবহারকারী</h3>
+    <form method="get" action="{{ url_for('settings') }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <label for="directory-search" style="width:100%">Employee ID, নাম, username, বিভাগ বা টিম দিয়ে খুঁজুন</label>
+        <input id="directory-search" type="search" name="q" maxlength="160" value="{{ directory.q }}" placeholder="যেমন: AAL05132 / Robiul / HR" style="flex:1;min-width:180px">
+        <button type="submit" style="margin:0">Search</button>
+        <a href="{{ url_for('settings') }}">Clear</a>
+    </form>
+    <p class="muted">মোট {{ directory.total }} · Page {{ directory.page }} / {{ directory.pages }} · প্রতি পেজে সর্বোচ্চ ২০ জন</p>
+    <div class="scroll"><table>
+        <thead><tr><th>Employee ID</th><th>Name</th><th>Username</th><th>Department / Team</th><th>Role</th><th>Status</th><th>Details</th></tr></thead>
+        <tbody>{% for person in directory.rows %}<tr>
+            <td>{{ person.Code or '—' }}</td>
+            <td>{{ person.Name or 'No linked employee' }}</td>
+            <td>{{ person.Username or 'No account' }}</td>
+            <td>{{ person.DepartmentName or '—' }} / {{ person.TeamName or '—' }}</td>
+            <td>{{ person.Role or '—' }}</td>
+            <td>{{ ('Active' if person.Active else 'Disabled') if person.UserId else 'No account' }}</td>
+            <td><a class="button secondary" style="margin:0;white-space:nowrap" href="{{ url_for('person_settings',kind=person.PersonType,person_id=person.PersonId) }}">বিস্তারিত</a></td>
+        </tr>{% else %}<tr><td colspan="7">কোনো মিল পাওয়া যায়নি।</td></tr>{% endfor %}</tbody>
+    </table></div>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:18px">
+        {% if directory.page > 1 %}<a class="button secondary" href="{{ url_for('settings',q=directory.q,page=directory.page-1) }}">Previous</a>{% endif %}
+        <span>Page {{ directory.page }}</span>
+        {% if directory.page < directory.pages %}<a class="button secondary" href="{{ url_for('settings',q=directory.q,page=directory.page+1) }}">Next</a>{% endif %}
+    </div>
+</div>
+{% endblock %}

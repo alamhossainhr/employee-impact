@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <h2>{{ employee.Name if employee else user.Username }}</h2>
+    <p>{{ employee.Code if employee else 'Account without employee link' }} · {{ user.Role if user else 'No user account' }}</p>
+    <a href="{{ url_for('settings') }}">← কর্মী ও ব্যবহারকারী তালিকা</a>
+</div>
+<div class="grid">
+{% if employee %}
+<div class="card"><h3>নাম পরিবর্তন</h3><form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="action" value="name">
+    <label for="employee-name">Employee name</label><input id="employee-name" name="name" value="{{ employee.Name }}" maxlength="160" required>
+    <button>Save name</button>
+</form></div>
+<div class="card"><h3>টিম পরিবর্তন</h3><form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="action" value="team">
+    <label for="new-team">Department / Team</label><select id="new-team" name="team" required>{% for t in teams %}<option value="{{ t.Id }}" {% if t.Id==employee.TeamId %}selected{% endif %}>{{ t.DepartmentName }} / {{ t.Name }}</option>{% endfor %}</select>
+    <p class="muted">পরবর্তী request থেকে নতুন টিমের access কার্যকর হবে। পুরোনো ঘটনার team/name snapshot বদলাবে না।</p>
+    <button>Save team</button>
+</form></div>
+{% endif %}
+{% if user %}
+<div class="card"><h3>Username পরিবর্তন</h3><form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="action" value="username">
+    <label for="new-username">Username</label><input id="new-username" name="username" value="{{ user.Username }}" maxlength="80" autocomplete="off" required>
+    <p class="muted">পরিবর্তিত username কমপক্ষে ৬ অক্ষর, English letter ও number থাকতে হবে; space নয়। পুরোনো ছোট username অপরিবর্তিত রাখা যাবে। নতুন username lowercase-এ save হবে।</p>
+    <button>Save username</button>
+</form></div>
+<div class="card"><h3>Password পরিবর্তন</h3><form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="action" value="password">
+    <label for="new-password">New password</label><input id="new-password" name="password" type="password" minlength="6" maxlength="256" pattern="(?=.*[A-Za-z])(?=.*[0-9])\S{6,256}" title="At least 6 characters, English letter and number; no spaces" autocomplete="new-password" required>
+    <p class="muted">পুরোনো password দেখানো হয় না। Reset করলে আগের sessions invalid হবে।</p>
+    <button>Reset password</button>
+</form></div>
+<div class="card"><h3>Account access</h3><p>{{ 'Active' if user.Active else 'Disabled' }} · {{ user.Role }}</p>
+{% if user.Role=='Admin' and user.Active %}<p class="muted">Admin disabling is blocked.</p>{% else %}
+<form method="post"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="secondary" name="action" value="{{ 'disable' if user.Active else 'enable' }}">{{ 'Disable' if user.Active else 'Enable' }}</button></form>
+{% endif %}</div>
+{% else %}
+<div class="card"><h3>Account নেই</h3><p>এই কর্মীর জন্য Settings-এর Create user account form থেকে account তৈরি করুন।</p><a href="{{ url_for('settings') }}">Create account</a></div>
+{% endif %}
+</div>
+{% endblock %}

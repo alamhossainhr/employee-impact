@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Approved entries</h2>
+
+    <p>
+        {{ records[0].EmployeeCode }}
+        · {{ records[0].EmployeeName }}
+    </p>
+
+    <p class="muted">
+        {{ records[0].DepartmentName }}
+        / {{ records[0].TeamName }}
+        · {{ start }} → {{ end }}
+    </p>
+
+    <div class="scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event time</th>
+                    <th>Entry</th>
+                    <th>Type</th>
+                    <th>Impact</th>
+                    <th>Employee allocation · BDT</th>
+                    <th>Details / Evidence</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for entry in records %}
+                <tr>
+                    <td>{{ entry.OccurredAt }}</td>
+
+                    <td>
+                        #{{ entry.Id }} · {{ entry.Title }}
+                    </td>
+
+                    <td>{{ entry.Kind }}</td>
+                    <td>{{ entry.Impact }}</td>
+
+                    <td>
+                        {{ entry.AllocatedCents | money }}
+                    </td>
+
+                    <td>
+                        <a
+                            class="button"
+                            href="{{ url_for('detail', rid=entry.Id) }}"
+                        >
+                            View details
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

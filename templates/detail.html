@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- Record details -->
+<div class="card">
+    <h2>#{{ r.Id }} · {{ r.Title }}</h2>
+
+    <p>
+        <span class="chip {{ r.Status }}">{{ r.Status }}</span>
+        · {{ r.DepartmentName }} / {{ r.TeamName }}
+        · {{ r.Kind }} / {{ r.Impact }}
+    </p>
+
+    <p class="muted">
+        Event: {{ r.OccurredAt }}
+        · Reported by: {{ r.Reporter }}
+        · Version {{ r.Version }}
+    </p>
+
+    <p class="pre">{{ r.Description }}</p>
+
+    <div class="grid">
+        <div>
+            Estimated:
+            <strong>৳ {{ r.EstimatedCents | money }}</strong>
+        </div>
+
+        <div>
+            Verified:
+            <strong>
+                {% if r.Status == 'Approved' %}
+                ৳ {{ r.VerifiedCents | money }}
+                {% else %}
+                Awaiting approval
+                {% endif %}
+            </strong>
+        </div>
+    </div>
+
+    <h3>সংশ্লিষ্ট কর্মী ও বরাদ্দ</h3>
+
+    <div class="scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Designation at event</th>
+                    <th>Estimated BDT</th>
+                    <th>Verified BDT</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for subject in subjects %}
+                <tr>
+                    <td>{{ subject.EmployeeCode }}</td>
+                    <td>{{ subject.EmployeeName }}</td>
+                    <td>{{ subject.Designation }}</td>
+                    <td>{{ subject.EstimatedCents | money }}</td>
+
+                    <td>
+                        {% if r.Status == 'Approved' %}
+                        {{ subject.VerifiedCents | money }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% else %}
+                <tr>
+                    <td colspan="5">কোনো কর্মী যুক্ত নেই।</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if can_edit %}
+    <a
+        class="button secondary"
+        href="{{ url_for('edit_record', rid=r.Id) }}"
+    >
+        Edit draft
+    </a>
+    {% endif %}
+
+    <a class="button secondary" href="{{ url_for('home') }}">
+        Dashboard
+    </a>
+</div>
+
+<div class="grid">
+
+    <!-- Evidence and document previews -->
+    <div class="card">
+        <h3>ছবি ও ডকুমেন্ট</h3>
+
+        {% for attachment in attachments %}
+        {% set extension =
+            attachment.StoredName.rsplit('.', 1)[-1] | lower
+        %}
+
+        <div style="margin-bottom: 24px;">
+            <p style="overflow-wrap: anywhere;">
+                <strong>{{ attachment.OriginalName }}</strong>
+                <br>
+                <small class="muted">
+                    {{ attachment.SizeBytes }} bytes
+                </small>
+            </p>
+
+            <a
+                class="button secondary"
+                href="{{ url_for(
+                    'preview_attachment',
+                    aid=attachment.Id
+                ) }}"
+                target="_blank"
+                rel="noopener"
+            >
+                View
+            </a>
+
+            <a
+                class="button secondary"
+                href="{{ url_for('download', aid=attachment.Id) }}"
+            >
+                Download
+            </a>
+
+            {% if extension in ['jpg', 'jpeg', 'png'] %}
+            <a
+                href="{{ url_for(
+                    'preview_attachment',
+                    aid=attachment.Id
+                ) }}"
+                target="_blank"
+                rel="noopener"
+            >
+                <img
+                    src="{{ url_for(
+                        'preview_attachment',
+                        aid=attachment.Id
+                    ) }}"
+                    alt="{{ attachment.OriginalName }}"
+                    loading="lazy"
+                    style="
+                        display: block;
+                        width: 100%;
+                        max-height: 450px;
+                        object-fit: contain;
+                        margin-top: 16px;
+                        border: 1px solid #dce5ed;
+                        border-radius: 8px;
+                    "
+                >
+            </a>
+
+            {% elif extension in ['pdf', 'docx', 'xlsx'] %}
+            <iframe
+                src="{{ url_for(
+                    'preview_attachment',
+                    aid=attachment.Id
+                ) }}"
+                title="Preview: {{ attachment.OriginalName }}"
+                loading="lazy"
+                style="
+                    display: block;
+                    width: 100%;
+                    height: 450px;
+                    margin-top: 16px;
+                    border: 1px solid #dce5ed;
+                    border-radius: 8px;
+                "
+            ></iframe>
+
+            <p class="muted">
+                Preview না দেখালে View দিয়ে নতুন tab-এ খুলুন
+                অথবা Download করুন।
+                Word/Excel preview-এ মূল formatting হুবহু নাও থাকতে পারে।
+            </p>
+
+            {% else %}
+            <p class="muted">
+                এই ফাইলের preview নেই। Download করে দেখুন।
+            </p>
+            {% endif %}
+        </div>
+
+        {% else %}
+        <p class="muted">কোনো সংযুক্তি নেই।</p>
+        {% endfor %}
+
+        {% if can_edit %}
+        <form
+            method="post"
+            enctype="multipart/form-data"
+            action="{{ url_for('upload', rid=r.Id) }}"
+        >
+            <input
+                type="hidden"
+                name="csrf"
+                value="{{ csrf() }}"
+            >
+            <input
+                type="hidden"
+                name="version"
+                value="{{ r.Version }}"
+            >
+
+            <label for="evidence-file">নতুন ছবি / ডকুমেন্ট</label>
+            <input
+                id="evidence-file"
+                name="file"
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx"
+                required
+            >
+
+            <p class="muted">
+                প্রতি ফাইল সর্বোচ্চ 10 MB।
+                JPG, PNG, PDF, DOCX ও XLSX গ্রহণযোগ্য।
+            </p>
+
+            <button type="submit">Upload evidence</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Review and approval -->
+    <div class="card">
+        <h3>রিভিউ ও অনুমোদন</h3>
+
+        {% set hr_can_review =
+            g.user.Role == 'HR' and r.Status == 'Submitted'
+        %}
+        {% set admin_can_decide =
+            g.user.Role == 'Admin'
+            and r.Status in ['Submitted', 'Reviewed']
+        %}
+        {% set admin_can_reopen =
+            g.user.Role == 'Admin'
+            and r.Status in ['Approved', 'Rejected']
+        %}
+
+        {% if can_edit or hr_can_review
+            or admin_can_decide or admin_can_reopen %}
+
+        <form
+            method="post"
+            action="{{ url_for('transition', rid=r.Id) }}"
+        >
+            <input
+                type="hidden"
+                name="csrf"
+                value="{{ csrf() }}"
+            >
+            <input
+                type="hidden"
+                name="version"
+                value="{{ r.Version }}"
+            >
+
+            <label for="review-comment">মন্তব্য / কারণ</label>
+            <textarea
+                id="review-comment"
+                name="comment"
+                maxlength="2000"
+                {% if admin_can_reopen %}required{% endif %}
+            ></textarea>
+
+            {% if can_edit %}
+            <p class="muted">
+                বিবরণ ও প্রমাণ যোগ করার পরে Submit করুন।
+            </p>
+
+            <button type="submit" name="action" value="submit">
+                Submit for review
+            </button>
+            {% endif %}
+
+            {% if hr_can_review %}
+            <button type="submit" name="action" value="review">
+                Mark HR reviewed
+            </button>
+            {% endif %}
+
+            {% if admin_can_decide %}
+            <label for="verified-amount">
+                যাচাইকৃত টাকা · BDT
+            </label>
+
+            <input
+                id="verified-amount"
+                name="verified"
+                type="number"
+                step="0.01"
+                min="0"
+                max="99999999999.99"
+                placeholder="Enter verified amount"
+            >
+
+            <p class="muted">
+                Approve করার জন্য যাচাইকৃত টাকা দিতে হবে।
+                Financial impact None হলে 0 দিন।
+                Reject বা Return-এর জন্য কারণ লিখুন।
+            </p>
+
+            <button type="submit" name="action" value="approve">
+                Approve
+            </button>
+
+            <button
+                type="submit"
+                class="danger"
+                name="action"
+                value="reject"
+            >
+                Reject
+            </button>
+
+            <button
+                type="submit"
+                class="secondary"
+                name="action"
+                value="return"
+            >
+                Return for correction
+            </button>
+            {% endif %}
+
+            {% if admin_can_reopen %}
+            <p class="muted">
+                Reopen করলে বর্তমান অনুমোদিত হিসাব রিপোর্ট থেকে সরবে।
+                সংশোধনের পরে পুনরায় Submit ও Approval লাগবে।
+                Reopen করার কারণ লিখুন।
+            </p>
+
+            <button
+                type="submit"
+                class="secondary"
+                name="action"
+                value="reopen"
+            >
+                Reopen for correction
+            </button>
+            {% endif %}
+        </form>
+
+        {% else %}
+        <p class="muted">
+            {% if r.Status in ['Draft', 'Returned'] %}
+            রেকর্ড তৈরি করেছেন যিনি, তাঁকে আগে Submit করতে হবে।
+            {% elif r.Status == 'Reviewed' %}
+            HR review সম্পন্ন। Admin approval-এর অপেক্ষায়।
+            {% elif r.Status == 'Submitted' %}
+            রেকর্ড জমা হয়েছে। HR review / Admin approval-এর অপেক্ষায়।
+            {% elif r.Status == 'Approved' %}
+            রেকর্ড অনুমোদিত।
+            {% elif r.Status == 'Rejected' %}
+            রেকর্ড প্রত্যাখ্যাত।
+            {% endif %}
+        </p>
+        {% endif %}
+
+        <h3>Review history</h3>
+
+        {% for review in reviews %}
+        <div style="
+            padding: 12px 0;
+            border-bottom: 1px solid #e7edf2;
+        ">
+            <strong>
+                {{ review.Action }} · {{ review.Username }}
+            </strong>
+
+            {% if review.Comment %}
+            <p class="pre">{{ review.Comment }}</p>
+            {% endif %}
+
+            <small class="muted">{{ review.CreatedAt }} UTC</small>
+        </div>
+
+        {% else %}
+        <p class="muted">এখনও কোনো review নেই।</p>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- Corrective actions -->
+<div class="card">
+    <h3>সংশোধনী কাজ</h3>
+
+    {% for action in actions %}
+    {% set is_overdue =
+        action.Status == 'Open'
+        and action.DueDate|string < today
+    %}
+
+    <div style="
+        padding: 14px 0;
+        border-bottom: 1px solid #e7edf2;
+    ">
+        <p class="pre">{{ action.Description }}</p>
+
+        <p>
+            {{ action.Owner }}
+            · Due {{ action.DueDate }}
+            ·
+            <span class="{{ 'overdue' if is_overdue else '' }}">
+                {{ action.Status }}
+                {% if is_overdue %} · Overdue{% endif %}
+            </span>
+        </p>
+
+        {% if action.Status == 'Open'
+            and (
+                g.user.Role in ['HR', 'Admin']
+                or g.user.EmployeeId == action.OwnerEmployeeId
+            )
+        %}
+        <form
+            method="post"
+            class="inline"
+            action="{{ url_for('complete_action', aid=action.Id) }}"
+        >
+            <input
+                type="hidden"
+                name="csrf"
+                value="{{ csrf() }}"
+            >
+
+            <button type="submit">Mark done</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <p class="muted">কোনো সংশোধনী কাজ নেই।</p>
+    {% endfor %}
+
+    {% if g.user.Role in ['HR', 'Admin'] %}
+    <details>
+        <summary>Add corrective action</summary>
+
+        <form
+            method="post"
+            action="{{ url_for('add_action', rid=r.Id) }}"
+        >
+            <input
+                type="hidden"
+                name="csrf"
+                value="{{ csrf() }}"
+            >
+
+            <label for="action-description">Description</label>
+            <textarea
+                id="action-description"
+                name="description"
+                maxlength="2000"
+                required
+            ></textarea>
+
+            <label for="action-owner">
+                Owner · incident team only
+            </label>
+            <select id="action-owner" name="owner" required>
+                <option value="">Select owner</option>
+
+                {% for employee in owners %}
+                <option value="{{ employee.Id }}">
+                    {{ employee.Code }} · {{ employee.Name }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <label for="action-due">Due date</label>
+            <input
+                id="action-due"
+                type="date"
+                name="due"
+                required
+            >
+
+            <button type="submit">Add action</button>
+        </form>
+    </details>
+    {% endif %}
+</div>
+
+{% endblock %}

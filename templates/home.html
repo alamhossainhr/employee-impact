@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Work & impact dashboard</h2>
+<p class="muted">{% if g.user.Role=='Employee' %}শুধু আপনার বর্তমান টিমের তথ্য{% else %}সব বিভাগ ও টিমের তথ্য{% endif %} · আর্থিক হিসাব শুধু অনুমোদিত রেকর্ডের</p>
+<p><strong>{% if start_date==today and end_date==today %}আজকের কাজ{% else %}নির্বাচিত সময়ের কাজ{% endif %}</strong> · {{ start_date }} → {{ end_date }} · Bangladesh time</p>
+<div class="grid">
+    <div class="card stat">Visible records<strong>{{ records|length }}</strong></div>
+    <div class="card stat">Verified gain · BDT<strong>{{ gain|money }}</strong></div>
+    <div class="card stat">Verified loss · BDT<strong>{{ loss|money }}</strong></div>
+    <div class="card stat">Net impact · BDT<strong>{{ (gain-loss)|money }}</strong></div>
+</div>
+<div class="card">
+    <form class="filters" method="get" action="{{ url_for('home') }}">
+        <div class="grid">
+            <div><label for="from-date">From date</label><input id="from-date" name="start_date" type="date" value="{{ start_date.isoformat() }}" required></div>
+            <div><label for="to-date">To date</label><input id="to-date" name="end_date" type="date" value="{{ end_date.isoformat() }}" required></div>
+            <div><label for="record-status">Status</label><select id="record-status" name="status">
+                <option value="">All</option>
+                {% for status in ['Draft','Submitted','Reviewed','Approved','Rejected','Returned'] %}<option value="{{ status }}" {% if selected_status==status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+            </select></div>
+        </div>
+        <button type="submit">Filter</button>
+        <a class="button secondary" href="{{ url_for('home') }}">আজকের কাজ / Reset</a>
+        <a class="button" href="{{ url_for('new_record') }}">+ নতুন রেকর্ড</a>
+        <p class="muted">ঘটনার সময় (Event time) অনুযায়ী কাজ দেখাবে। From ও To—দুই তারিখের সম্পূর্ণ দিন অন্তর্ভুক্ত। উপরের হিসাবও একই তারিখ ও Status filter অনুযায়ী।</p>
+    </form>
+    <div class="scroll"><table>
+        <thead><tr><th>Record</th><th>Department / Team</th><th>Event time</th><th>Type</th><th>Status</th><th>Estimated BDT</th><th>Verified BDT</th></tr></thead>
+        <tbody>{% for r in records %}<tr>
+            <td><a href="{{ url_for('detail',rid=r.Id) }}">#{{ r.Id }} · {{ r.Title }}</a></td>
+            <td>{{ r.DepartmentName }} / {{ r.TeamName }}</td>
+            <td>{{ r.OccurredAt }}</td><td>{{ r.Kind }} · {{ r.Impact }}</td>
+            <td><span class="chip {{ r.Status }}">{{ r.Status }}</span></td>
+            <td>{{ r.EstimatedCents|money }}</td>
+            <td>{% if r.Status=='Approved' %}{{ r.VerifiedCents|money }}{% else %}—{% endif %}</td>
+        </tr>{% else %}<tr><td colspan="7">এই সময় ও Status অনুযায়ী কোনো কাজ পাওয়া যায়নি। পুরোনো কাজ দেখতে From–To পরিবর্তন করুন।</td></tr>{% endfor %}</tbody>
+    </table></div>
+</div>
+{% endblock %}
